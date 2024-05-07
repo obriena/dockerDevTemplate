@@ -70,17 +70,24 @@ flowchart LR
 ## Database Migrations
 The Docker file we are developing has a library called [migrate](https://github.com/golang-migrate/migrate/) all structural changes to the database should be managed through this.  Here is a command to start:
 ```
-migrate -path migrations -database "mysql://db_user:db_user_pass@tcp(192.168.65.254:6033)/app_db" up
+migrate -path migrations -database "mysql://db_user:db_user_pass@tcp(host.docker.internal:6033)/app_db" up
 ```
+
+## Database Integration
+So once we have some data out there we are going to need to be able to write to it.  We will use the [GORM](https://gorm.io/index.html) library to manage this.  We are going to follow a domain driven technique of using data repositories, and interactors to achieve this. 
 
 ## Building the development image
 Initially development went well enough with a docker image that looked like this:  
 ```
 from golang
 ```
-There was a problem connecting to 
+This worked well enough but it is better to be working with an image that has Migrage and Reflex pre-installed so I created another docker file to create an image that has the tools in it that I will need to develop in
 
 to build the dev image here is the command:  
 ```
-docker build -f dev.DockerFile  -t flyingspheres/develpment:0.1 .
+docker build -f dev.DockerFile  -t flyingspheres/develpment:0.0.1 .
 ```
+
+This only builds an image.  I took this image `flyingspheres/develpment:0.0.1` and replaced the `from golang` to 
+`from flyingspheres/development:0.0.1`.  If I didn't do that, then everytime I launched the dev enviornment it would download migrate and 
+reflex again.  Not a huge deal but this will be faster, and having more control over the tools necesary will be helpful things like ping and curl are now available to me as well.  
