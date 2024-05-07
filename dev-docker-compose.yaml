@@ -1,0 +1,41 @@
+version: '3.6'
+
+services:
+  dbdockerdev:
+    image: mariadb:10.5.8
+    container_name: dbdockerdev
+    environment:
+      MYSQL_ROOT_PASSWORD: my_secret_password
+      MYSQL_DATABASE: app_db
+      MYSQL_USER: db_user
+      MYSQL_PASSWORD: db_user_pass
+    ports:
+      - "6033:3306"
+    volumes:
+      - dbdata:/docker/dbdata
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: dbadmindockerdev
+    depends_on:
+      - dbdockerdev
+    environment:
+      PMA_HOST: dbdockerdev
+      PMA_PORT: 3306
+      PMA_ARBITRARY: 1
+    restart: always
+    ports:
+      - 8081:80
+
+  prometheus:
+    image: prom/prometheus
+    ports: 
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+  push-gateway:
+    image: prom/pushgateway
+    ports:
+    - "9091:9091"
+volumes:
+  dbdata:
