@@ -19,5 +19,4 @@ RUN chmod a+x ./migrate
 RUN mv ./migrate /usr/local/bin/ 
 RUN rm ./migrate*tar
 RUN rm README.md
-RUN rm migrate.linux-amd64.tar
 

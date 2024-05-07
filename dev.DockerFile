@@ -1,2 +1,2 @@
-FROM flyingspheres/develpment:0.1  
+FROM flyingspheres/develpment:0.0.1  
 
