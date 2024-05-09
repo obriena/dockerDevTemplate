@@ -107,17 +107,33 @@ sequenceDiagram
 ```
 ```mermaid
 ---
-title: Animal example
+title: Class Diagram
 ---
 classDiagram
     domain_PostRepo <|-- repository_mysqlrepo_rep
     domain_PostInteractor <|-- post_interactor
-    main_service <|-- service
-    domain_PostRepo: +Create(context, Post)
-    domain_PostRepo: +ReadAll(context)
-    domain_PostRepo: +ReadById(context, int)
-    domain_PostRepo: +Update(context, Post)
+    main_service 
+    domain_PostRepo: Create(context, Post)
+    domain_PostRepo: ReadAll(context)
+    domain_PostRepo: ReadById(context, int)
+    domain_PostRepo: Update(context, Post)
 
-    repository_mysqlrepo_rep: +toDomainList([]postModel)
-    repository_mysqlrepo_rep: +(p *postModel)toDomain(postModel)
+    domain_PostInteractor: Add(context, PostInteractorAddIniput) (output, error)
+    domain_PostInteractor: ReadAll(context) (output, error)
+    domain_PostInteractor: ReadById(context, ReadyByIdInput) (output, error)
+    domain_PostInteractor: ReadByCreatedById(context, ReadByCreatedIdInput) (output, error)
+    
+    main_service : Service
+    main_service: main()
+    main_service: newService()
+    main_service: (s *Service) Init() 
+    main_service: pushProcessingDuration()
+    main_service: pushProcessingCount()
+    main_service: RespondJSON()
+    main_service: connectDB()
+
+    repository_mysqlrepo_rep: NewRepository(db *gorm.DB) 
+    repository_mysqlrepo_rep: toDomainList([]postModel)
+    repository_mysqlrepo_rep: (p *postModel)toDomain(postModel)
+    post_interactor: NewInteractor(repo domain.PostRepo)
 ```

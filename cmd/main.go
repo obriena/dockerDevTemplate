@@ -43,6 +43,7 @@ func main() {
 	service := newService()
 	if err := service.Init(context); err != nil {
 		log.Println("Service did not initialize.", err)
+		return
 	}
 	r := chi.NewRouter()
 
@@ -106,7 +107,6 @@ func newService() *Service {
 }
 
 func (s *Service) Init(ctx context.Context) error {
-
 	config := infra.GetConfig()
 	db, err := connectDB(config)
 	if err != nil {
