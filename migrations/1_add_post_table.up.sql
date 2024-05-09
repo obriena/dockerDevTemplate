@@ -2,6 +2,7 @@ CREATE TABLE `post` (
     `id` int NOT NULL AUTO_INCREMENT,
     `content` varchar(255) NOT NULL,
     `title` varchar(255) NOT NULL,
+    `language` varchar(50) NOT NULL,
     `ownerId` int NOT NULL,
     `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
     `created_by` int NOT NULL,

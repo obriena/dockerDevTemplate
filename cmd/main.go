@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,18 +11,26 @@ import (
 	chiprometheus "github.com/766b/chi-prometheus"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/obriena/dockerdevtemplate/domain"
+	"github.com/obriena/dockerdevtemplate/infra"
+	"github.com/obriena/dockerdevtemplate/post"
+	postrepo "github.com/obriena/dockerdevtemplate/post/repository/mysqlrepo"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/client_golang/prometheus/push"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
+var Db *gorm.DB
+
 var (
-	processingTime = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "task_event_process_duration",
+	queryAllTime = prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "task_event_query_all_duration",
 		Help: "Time it took to complete a taks",
 	})
-	processedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "task_event_processing_total",
+	queryAllCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Name: "task_event_query_all_total",
 		Help: "How many tasks have been processed",
 	},
 		[]string{"task"}).WithLabelValues("task")
@@ -29,17 +38,12 @@ var (
 
 func main() {
 	log.Println("Starting services")
+	context := context.Background()
 
-	processingTime = prometheus.NewGauge(prometheus.GaugeOpts{
-		Name: "task_event_process_duration",
-		Help: "Time it took to complete a taks",
-	})
-	processedCounter = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Name: "task_event_processing_total",
-		Help: "How many tasks have been processed",
-	},
-		[]string{"task"}).WithLabelValues("task")
-
+	service := newService()
+	if err := service.Init(context); err != nil {
+		log.Println("Service did not initialize.", err)
+	}
 	r := chi.NewRouter()
 
 	// A good base middleware stack
@@ -58,33 +62,32 @@ func main() {
 		message := make(map[string]string)
 		message["message"] = "Hi"
 		elapsed := time.Since(start)
-		processingTime.Set(float64(elapsed.Milliseconds()))
-		processedCounter.Add(1)
+
 		log.Println("Elapsed Time: ")
 		log.Println(elapsed.Milliseconds())
-		pushProcessingDuration(processingTime)
-		pushProcessingCount(processedCounter)
 		RespondJSON(w, r, message)
 	})
 
-	// RESTy routes for "articles" resource
-	r.Route("/articles", func(r chi.Router) {
-		// r.With(paginate).Get("/", listArticles)                           // GET /articles
-		// r.With(paginate).Get("/{month}-{day}-{year}", listArticlesByDate) // GET /articles/01-16-2017
+	r.Route("/posts", func(r chi.Router) {
+		/*
+			Chi has routes that can have pagination built in somethin like this
+			r.With(paginate).Get("/path", ...)
+		*/
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
 
-		// r.Post("/", createArticle)                                        // POST /articles
-		// r.Get("/search", searchArticles)                                  // GET /articles/search
+			posts, err := service.postInteractor.ReadAll(context)
+			if err != nil {
+				log.Println("Error retrieving posts: ", err)
+			} else {
+				RespondJSON(w, r, posts)
+			}
+			elapsed := time.Since(start)
 
-		// Regexp url parameters:
-		// r.Get("/{articleSlug:[a-z-]+}", getArticleBySlug)                // GET /articles/home-is-toronto
-
-		// Subrouters:
-		r.Route("/{articleID}", func(r chi.Router) {
-
-			// r.Use(ArticleCtx)
-			r.Get("/", getArticle) // GET /articles/123
-			// r.Put("/", updateArticle)                                       // PUT /articles/123
-			// r.Delete("/", deleteArticle)                                    // DELETE /articles/123
+			queryAllTime.Set(float64(elapsed.Milliseconds()))
+			queryAllCounter.Add(1)
+			pushProcessingDuration(queryAllTime)
+			pushProcessingCount(queryAllCounter)
 		})
 	})
 
@@ -93,15 +96,26 @@ func main() {
 	log.Println("Service ending")
 }
 
-func getArticle(w http.ResponseWriter, r *http.Request) {
-	//ctx := r.Context()
-	article := Article{ID: "0", UserID: 0, Title: "Best Article", Slug: "uniqueId"}
-	// if !ok {
-	// 	http.Error(w, http.StatusText(http.StatusUnprocessableEntity), http.StatusUnprocessableEntity)
-	// 	return
-	// }
-	//w.Write([]byte(fmt.Sprintf("title:%s", article.Title)))
-	RespondJSON(w, r, article)
+type Service struct {
+	db             *gorm.DB
+	postInteractor domain.PostInteractor
+}
+
+func newService() *Service {
+	return &Service{}
+}
+
+func (s *Service) Init(ctx context.Context) error {
+
+	config := infra.GetConfig()
+	db, err := connectDB(config)
+	if err != nil {
+		return err
+	}
+	s.db = db
+	aRepo := postrepo.NewRepository(db)
+	s.postInteractor = post.NewInteractor(aRepo)
+	return nil
 }
 
 func pushProcessingDuration(processingTime prometheus.Gauge) {
@@ -129,9 +143,16 @@ func RespondJSON(w http.ResponseWriter, r *http.Request, data interface{}) {
 	w.Write(b)
 }
 
-type Article struct {
-	ID     string `json:"id"`
-	UserID int64  `json:"user_id"` // the author
-	Title  string `json:"title"`
-	Slug   string `json:"slug"`
+func connectDB(config *infra.Config) (*gorm.DB, error) {
+	var err error
+	dsn := config.DbUser + ":" + config.DbPassword + "@tcp" + "(" + config.DbHost + ":" + config.DbPort + ")/" + config.DbName + "?" + "parseTime=true&loc=Local"
+	log.Println("@tcp(" + config.DbHost + ":" + config.DbPort + ")/" + config.DbName)
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	if err != nil {
+		log.Printf("Error connecting to database : error=%v", err)
+		return nil, err
+	}
+
+	return db, nil
 }

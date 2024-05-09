@@ -85,9 +85,39 @@ This worked well enough but it is better to be working with an image that has Mi
 
 to build the dev image here is the command:  
 ```
-docker build -f dev.DockerFile  -t flyingspheres/develpment:0.0.1 .
+docker build -f dev.build.DockerFile  -t flyingspheres/develpment:0.0.1 .
 ```
 
 This only builds an image.  I took this image `flyingspheres/develpment:0.0.1` and replaced the `from golang` to 
 `from flyingspheres/development:0.0.1`.  If I didn't do that, then everytime I launched the dev enviornment it would download migrate and 
 reflex again.  Not a huge deal but this will be faster, and having more control over the tools necesary will be helpful things like ping and curl are now available to me as well.  
+
+## Application Flow
+Retrieve all posts
+```mermaid
+sequenceDiagram
+    cmd/main.go->>postInteractor: ReadAll(context)
+    postInteractor-->>repo: ReadAll(Context)
+    repo->>db: Find(allPosts)
+    db-->>repo: data
+    repo->>repo: toDomainList
+    repo->>postInteractor: response
+    postInteractor->>postInteractor: convertToPostOutput
+    postInteractor->>cmd/main.go: RespondJson
+```
+```mermaid
+---
+title: Animal example
+---
+classDiagram
+    domain_PostRepo <|-- repository_mysqlrepo_rep
+    domain_PostInteractor <|-- post_interactor
+    main_service <|-- service
+    domain_PostRepo: +Create(context, Post)
+    domain_PostRepo: +ReadAll(context)
+    domain_PostRepo: +ReadById(context, int)
+    domain_PostRepo: +Update(context, Post)
+
+    repository_mysqlrepo_rep: +toDomainList([]postModel)
+    repository_mysqlrepo_rep: +(p *postModel)toDomain(postModel)
+```

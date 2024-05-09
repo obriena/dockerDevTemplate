@@ -4,6 +4,9 @@ RUN apt-get update && apt-get install -y wget
 RUN apt install inetutils-ping -y
 RUN apt install curl -y
 
+RUN go get gorm.io/driver/mysql
+RUN go get gorm.io/gorm
+
 RUN wget https://github.com/cespare/reflex/releases/download/v0.3.1/reflex_linux_amd64.tar.gz
 RUN gunzip reflex_linux_amd64.tar.gz
 RUN tar -xvf reflex_linux_amd64.tar
