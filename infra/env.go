@@ -1,12 +1,19 @@
 package infra
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/joho/godotenv"
 )
+
+type ctxKey string
+
+const CtxServiceKey ctxKey = "serviceKey"
+const CtxPostInteractorKey ctxKey = "postInteractorKey"
 
 type Config struct {
 	Env        string
@@ -70,4 +77,12 @@ func goDotEnvVariable(key string) string {
 	}
 
 	return os.Getenv(key)
+}
+
+func RespondJSON(w http.ResponseWriter, r *http.Request, data interface{}) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	b, _ := json.Marshal(data)
+
+	w.Write(b)
 }

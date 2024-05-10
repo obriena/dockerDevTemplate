@@ -36,8 +36,13 @@ func (i *Interactor) ReadAll(context context.Context) (domain.PostOutput, error)
 	return po, nil
 }
 
-func (i *Interactor) ReadById(context.Context, domain.PostInteractorReadByIdInput) (domain.PostInteractorReadByIdOutput, error) {
-	return domain.PostInteractorReadByIdOutput{}, nil
+func (i *Interactor) ReadById(context context.Context, readInput domain.PostInteractorReadByIdInput) (domain.PostInteractorReadByIdOutput, error) {
+	post, err := i.repo.ReadById(context, readInput.Id)
+	if err != nil {
+		return domain.PostInteractorReadByIdOutput{}, err
+	}
+	output := domain.PostInteractorReadByIdOutput{Post: post}
+	return output, nil
 }
 
 func (i *Interactor) ReadByCreatedById(context.Context, domain.PostInteractorReadByCreatedIdInput) (domain.PostInteractorReadByCreatedByIdOutput, error) {

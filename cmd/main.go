@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 	chiprometheus "github.com/766b/chi-prometheus"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/obriena/dockerdevtemplate/controllers"
 	"github.com/obriena/dockerdevtemplate/domain"
 	"github.com/obriena/dockerdevtemplate/infra"
 	"github.com/obriena/dockerdevtemplate/post"
@@ -25,6 +25,8 @@ import (
 var Db *gorm.DB
 
 var (
+	service Service
+
 	queryAllTime = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "task_event_query_all_duration",
 		Help: "Time it took to complete a taks",
@@ -38,13 +40,16 @@ var (
 
 func main() {
 	log.Println("Starting services")
-	context := context.Background()
+	ctx := context.Background()
 
-	service := newService()
-	if err := service.Init(context); err != nil {
+	service = newService()
+	if err := service.Init(ctx); err != nil {
 		log.Println("Service did not initialize.", err)
 		return
 	}
+
+	ctx = context.WithValue(ctx, infra.CtxPostInteractorKey, service.postInteractor)
+
 	r := chi.NewRouter()
 
 	// A good base middleware stack
@@ -66,10 +71,11 @@ func main() {
 
 		log.Println("Elapsed Time: ")
 		log.Println(elapsed.Milliseconds())
-		RespondJSON(w, r, message)
+		infra.RespondJSON(w, r, message)
 	})
 
 	r.Route("/posts", func(r chi.Router) {
+		r.Use(setupContext)
 		/*
 			Chi has routes that can have pagination built in somethin like this
 			r.With(paginate).Get("/path", ...)
@@ -77,11 +83,11 @@ func main() {
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			posts, err := service.postInteractor.ReadAll(context)
+			posts, err := service.postInteractor.ReadAll(ctx)
 			if err != nil {
 				log.Println("Error retrieving posts: ", err)
 			} else {
-				RespondJSON(w, r, posts)
+				infra.RespondJSON(w, r, posts)
 			}
 			elapsed := time.Since(start)
 
@@ -90,6 +96,7 @@ func main() {
 			pushProcessingDuration(queryAllTime)
 			pushProcessingCount(queryAllCounter)
 		})
+		r.Get("/{postId}", http.HandlerFunc(controllers.RetrievePostById))
 	})
 
 	http.ListenAndServe(":80", r)
@@ -97,14 +104,28 @@ func main() {
 	log.Println("Service ending")
 }
 
+func setupContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		log.Println("main: SetupContext", r.URL.Query())
+		ctx := context.WithValue(r.Context(), infra.CtxPostInteractorKey, service.postInteractor)
+		next.ServeHTTP(rw, r.WithContext(ctx))
+	})
+}
+
 type Service struct {
 	db             *gorm.DB
 	postInteractor domain.PostInteractor
 }
 
-func newService() *Service {
-	return &Service{}
+func newService() Service {
+	log.Println("main: creating new service")
+	service := Service{}
+	return service
 }
+
+// func newService() *Service {
+// 	return &Service{}
+// }
 
 func (s *Service) Init(ctx context.Context) error {
 	config := infra.GetConfig()
@@ -134,13 +155,6 @@ func pushProcessingCount(processedCounter prometheus.Counter) {
 		Push(); err != nil {
 		fmt.Println("Could not push tasks processed to Pushgateway:", err)
 	}
-}
-func RespondJSON(w http.ResponseWriter, r *http.Request, data interface{}) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	b, _ := json.Marshal(data)
-
-	w.Write(b)
 }
 
 func connectDB(config *infra.Config) (*gorm.DB, error) {

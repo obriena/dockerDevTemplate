@@ -13,7 +13,7 @@ const table = "post"
 
 type postModel struct {
 	gorm.Model
-	Id        int
+	Id        int `gorm:"primarykey;size:16"`
 	Content   string
 	Title     string
 	OwnerId   int
@@ -55,7 +55,18 @@ func (r *Repository) ReadAll(context context.Context) ([]domain.Post, error) {
 }
 
 func (r *Repository) ReadById(context context.Context, postId int) (domain.Post, error) {
-	return domain.Post{}, nil
+	log.Println("post.repo: Reading posts for id: ", postId)
+	aPost := postModel{}
+
+	err := r.db.Table(table).Where("id = ?", postId).First(&aPost).Error
+	if err != nil {
+		log.Println("Error retrieving data: ", err)
+		return domain.Post{}, err
+	}
+	dPost := aPost.toDomain()
+	log.Println("post.repo: Done Reading all posts", dPost)
+
+	return dPost, nil
 }
 
 func (r *Repository) Update(context.Context, domain.Post) (domain.Post, error) {
