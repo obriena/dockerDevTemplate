@@ -10,6 +10,7 @@ type Post struct {
 	Content   string
 	Title     string
 	OwnerId   int
+	Deleted   bool
 	CreatedAt time.Time
 	CreatedBy int
 	DeletedAt time.Time

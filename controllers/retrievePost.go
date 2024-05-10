@@ -23,8 +23,8 @@ func RetrievePostById(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	postInteractor := ctx.Value(infra.CtxPostInteractorKey).(domain.PostInteractor)
-	start := time.Now()
 
+	start := time.Now()
 	postInput := domain.PostInteractorReadByIdInput{Id: i}
 	posts, err := postInteractor.ReadById(ctx, postInput)
 	if err != nil {
@@ -34,5 +34,6 @@ func RetrievePostById(w http.ResponseWriter, r *http.Request) {
 		infra.RespondJSON(w, r, posts)
 	}
 	elapsed := time.Since(start)
+
 	log.Println("controllers.RetrievePostByID end elapsed time: ", elapsed.Milliseconds())
 }

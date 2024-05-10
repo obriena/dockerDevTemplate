@@ -25,7 +25,7 @@ import (
 var Db *gorm.DB
 
 var (
-	service Service
+	service *Service = newService()
 
 	queryAllTime = prometheus.NewGauge(prometheus.GaugeOpts{
 		Name: "task_event_query_all_duration",
@@ -42,7 +42,7 @@ func main() {
 	log.Println("Starting services")
 	ctx := context.Background()
 
-	service = newService()
+	//service = newService()
 	if err := service.Init(ctx); err != nil {
 		log.Println("Service did not initialize.", err)
 		return
@@ -117,15 +117,9 @@ type Service struct {
 	postInteractor domain.PostInteractor
 }
 
-func newService() Service {
-	log.Println("main: creating new service")
-	service := Service{}
-	return service
+func newService() *Service {
+	return &Service{}
 }
-
-// func newService() *Service {
-// 	return &Service{}
-// }
 
 func (s *Service) Init(ctx context.Context) error {
 	config := infra.GetConfig()

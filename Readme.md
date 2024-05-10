@@ -72,6 +72,11 @@ The Docker file we are developing has a library called [migrate](https://github.
 ```
 migrate -path migrations -database "mysql://db_user:db_user_pass@tcp(host.docker.internal:6033)/app_db" up
 ```
+### Creating migrate scripts
+Here is a helpful command
+```
+migrate create -ext sql -dir migrations add_deleted_column_posts
+```
 
 ## Database Integration
 So once we have some data out there we are going to need to be able to write to it.  We will use the [GORM](https://gorm.io/index.html) library to manage this.  We are going to follow a domain driven technique of using data repositories, and interactors to achieve this. 

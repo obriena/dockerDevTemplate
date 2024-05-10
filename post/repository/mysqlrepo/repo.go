@@ -16,6 +16,7 @@ type postModel struct {
 	Id        int `gorm:"primarykey;size:16"`
 	Content   string
 	Title     string
+	Deleted   bool
 	OwnerId   int
 	CreatedAt time.Time
 	CreatedBy int
@@ -86,6 +87,7 @@ func (p *postModel) toDomain() domain.Post {
 		Content:   p.Content,
 		Title:     p.Title,
 		OwnerId:   p.OwnerId,
+		Deleted:   p.Deleted,
 		CreatedAt: p.CreatedAt,
 		CreatedBy: p.CreatedBy,
 		DeletedAt: p.deletedAt,
