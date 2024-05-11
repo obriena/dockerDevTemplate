@@ -97,6 +97,10 @@ func main() {
 			pushProcessingCount(queryAllCounter)
 		})
 		r.Get("/{postId}", http.HandlerFunc(controllers.RetrievePostById))
+		r.Get("/ownerId/{ownerId}", http.HandlerFunc(controllers.RetrievePostsByOwnerId))
+		r.Delete("/{postId}", http.HandlerFunc(controllers.DeletePost))
+		r.Put("/", http.HandlerFunc(controllers.UpdatePost))
+		r.Post("/", http.HandlerFunc(controllers.SavePost))
 	})
 
 	http.ListenAndServe(":80", r)

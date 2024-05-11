@@ -13,7 +13,8 @@
 			"extensions": [
 				"golang.go",
 				"ms-azuretools.vscode-docker",
-				"formulahendry.vscode-mysql"
+				"formulahendry.vscode-mysql",
+				"rangav.vscode-thunder-client"
 			]
 		}
 	},

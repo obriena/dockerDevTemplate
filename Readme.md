@@ -75,7 +75,7 @@ migrate -path migrations -database "mysql://db_user:db_user_pass@tcp(host.docker
 ### Creating migrate scripts
 Here is a helpful command
 ```
-migrate create -ext sql -dir migrations add_deleted_column_posts
+migrate create -ext sql -dir migrations -seq -digits 3 add_deleted_column_posts
 ```
 
 ## Database Integration

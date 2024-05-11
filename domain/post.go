@@ -6,13 +6,13 @@ import (
 )
 
 type Post struct {
-	Id        int
-	Content   string
-	Title     string
-	OwnerId   int
-	Deleted   bool
-	CreatedAt time.Time
-	CreatedBy int
+	Id        int       `json:"id"`
+	Content   string    `json:"content"`
+	Title     string    `json:"title"`
+	Language  string    `json:"language"`
+	OwnerId   int       `json:"ownerId"`
+	Deleted   bool      `json:"deleted"`
+	CreatedAt time.Time `json:"createdAt"`
 	DeletedAt time.Time
 	DeletedBy int
 	UpdatedAt time.Time
@@ -30,7 +30,9 @@ type PostRepo interface {
 	Create(context.Context, Post) (Post, error)
 	ReadAll(context.Context) ([]Post, error)
 	ReadById(context.Context, int) (Post, error)
+	ReadByOwnerId(context.Context, int) ([]Post, error)
 	Update(context.Context, Post) (Post, error)
+	Delete(context.Context, int) error
 }
 
 type PostInteractor interface {
@@ -38,12 +40,15 @@ type PostInteractor interface {
 	ReadAll(context.Context) (PostOutput, error)
 	ReadById(context.Context, PostInteractorReadByIdInput) (PostInteractorReadByIdOutput, error)
 	ReadByCreatedById(context.Context, PostInteractorReadByCreatedIdInput) (PostInteractorReadByCreatedByIdOutput, error)
+	Delete(context.Context, PostInteractorDeleteInput) error
+	Update(context.Context, Post) (PostInteractorUpdateOutput, error)
 }
 
 type PostInteractorAddInput struct {
-	Content string
-	Title   string
-	OwnerId int
+	Content   string
+	Title     string
+	OwnerId   int
+	CreatedBy int
 }
 
 type PostInteractorAddOutput struct {
@@ -67,5 +72,14 @@ type PostInteractorReadByIdOutput struct {
 }
 
 type PostInteractorReadByCreatedByIdOutput struct {
+	Post     []Post
+	ListInfo ListInfo
+}
+
+type PostInteractorDeleteInput struct {
+	Id int
+}
+
+type PostInteractorUpdateOutput struct {
 	Post Post
 }

@@ -1,0 +1,1 @@
+ALTER TABLE post RENAME COLUMN `owner_id` TO `ownerId`;
