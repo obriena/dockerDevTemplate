@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -14,6 +15,8 @@ type ctxKey string
 
 const CtxServiceKey ctxKey = "serviceKey"
 const CtxPostInteractorKey ctxKey = "postInteractorKey"
+const CtxPostIdKey ctxKey = "postIdKey"
+const CtxPostOwnerIdKey ctxKey = "ownerIdKey"
 
 type Config struct {
 	Env        string
@@ -28,8 +31,23 @@ type Config struct {
 var config *Config
 
 func GetConfig() *Config {
-	goDotEnvVariable(".env")
+	//goDotEnvVariable(".env")
 
+	curDir, err := os.Getwd()
+	if err != nil {
+		log.Println(err)
+	}
+	var envLoc string
+	if strings.HasSuffix(curDir, "/cmd") {
+		trimLength := len(curDir) - len("/cmd")
+		envLoc = string(curDir[0:trimLength])
+	} else {
+		envLoc = curDir
+	}
+	loadErr := godotenv.Load(envLoc + "/.env")
+	if loadErr != nil {
+		log.Fatalln("can't load env file from current directory: " + curDir + "/.env")
+	}
 	config = &Config{
 		Env:        GetString("Environment", "local"),
 		MaxRetries: GetInt("MaxRetries", 3),

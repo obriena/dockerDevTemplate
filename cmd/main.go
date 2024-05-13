@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	chiprometheus "github.com/766b/chi-prometheus"
@@ -40,9 +43,16 @@ var (
 
 func main() {
 	log.Println("Starting services")
+
+	ex, err := os.Executable()
+	if err != nil {
+		panic(err)
+	}
+	exPath := filepath.Dir(ex)
+	log.Println(exPath)
+
 	ctx := context.Background()
 
-	//service = newService()
 	if err := service.Init(ctx); err != nil {
 		log.Println("Service did not initialize.", err)
 		return
@@ -96,13 +106,20 @@ func main() {
 			pushProcessingDuration(queryAllTime)
 			pushProcessingCount(queryAllCounter)
 		})
-		r.Get("/{postId}", http.HandlerFunc(controllers.RetrievePostById))
-		r.Get("/ownerId/{ownerId}", http.HandlerFunc(controllers.RetrievePostsByOwnerId))
-		r.Delete("/{postId}", http.HandlerFunc(controllers.DeletePost))
 		r.Put("/", http.HandlerFunc(controllers.UpdatePost))
 		r.Post("/", http.HandlerFunc(controllers.SavePost))
+		// Subrouters:
+		r.Route("/{postId}", func(r chi.Router) {
+			r.Use(buildPostIdContext)
+			r.Get("/", http.HandlerFunc(controllers.RetrievePostById))
+			r.Delete("/", http.HandlerFunc(controllers.DeletePost))
+		})
+		r.Route("/ownerId/{ownerId}", func(r chi.Router) {
+			r.Use(buildOwnerContext)
+			r.Get("/", http.HandlerFunc(controllers.RetrievePostsByOwnerId))
+		})
 	})
-
+	log.Println("Listening and serveing: http://localhost/ or http://localhost:54719/")
 	http.ListenAndServe(":80", r)
 
 	log.Println("Service ending")
@@ -114,6 +131,37 @@ func setupContext(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), infra.CtxPostInteractorKey, service.postInteractor)
 		next.ServeHTTP(rw, r.WithContext(ctx))
 	})
+}
+func buildPostIdContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		// ctx := context.WithValue(r.Context(), infra.CtxPostInteractorKey, service.postInteractor)
+		// postId := chi.URLParam(r, "postId")
+		// i, err := strconv.Atoi(postId)
+		// if err != nil {
+		// 	log.Fatal("Error converting ", postId, " to integer")
+		// }
+		// //ownerId := chi.URLParam(r, "ownerId")
+		// ctx = context.WithValue(ctx, infra.CtxPostIdKey, i)
+		// //ctx = context.WithValue(ctx, infra.CtxPostOwnerIdKey, ownerId)
+		// next.ServeHTTP(rw, r.WithContext(ctx))
+		next.ServeHTTP(rw, r.WithContext(getIntVariableAndPutInContext("postId", r)))
+	})
+}
+
+func buildOwnerContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+		ctx := getIntVariableAndPutInContext("ownerId", r)
+		next.ServeHTTP(rw, r.WithContext(ctx))
+	})
+}
+func getIntVariableAndPutInContext(key string, r *http.Request) context.Context {
+	ctx := context.WithValue(r.Context(), infra.CtxPostInteractorKey, service.postInteractor)
+	value := chi.URLParam(r, key)
+	i, err := strconv.Atoi(value)
+	if err != nil {
+		log.Fatal("Error converting ", key, " to integer")
+	}
+	return context.WithValue(ctx, infra.CtxPostIdKey, i)
 }
 
 type Service struct {

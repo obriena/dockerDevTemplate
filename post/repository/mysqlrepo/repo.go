@@ -81,16 +81,16 @@ func (r *Repository) ReadById(context context.Context, postId int) (domain.Post,
 	return dPost, nil
 }
 func (r *Repository) ReadByOwnerId(context context.Context, ownerId int) ([]domain.Post, error) {
-	log.Println("post.repo: ReadByCreatedId posts")
+	log.Println("post.repo: ReadByOwnerId posts: ", ownerId)
 	allPosts := []postModel{}
 
-	err := r.db.Table(table).Where("ownerId = ?", ownerId).First(&allPosts).Error
+	err := r.db.Table(table).Where("owner_id = ?", ownerId).Find(&allPosts).Error
 	if err != nil {
 		log.Println("Error retrieving data: ", err)
 		return nil, err
 	}
 	postList := toDomainList(allPosts)
-	log.Println("post.repo: Done Reading all posts", postList)
+	log.Println("post.repo: Done Reading post by owner id", postList)
 
 	return postList, nil
 }

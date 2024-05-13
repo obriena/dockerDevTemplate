@@ -75,7 +75,7 @@ migrate -path migrations -database "mysql://db_user:db_user_pass@tcp(host.docker
 ### Creating migrate scripts
 Here is a helpful command
 ```
-migrate create -ext sql -dir migrations -seq -digits 3 add_deleted_column_posts
+migrate create -ext sql -dir migrations -seq -digits 3 <function_detail_table>
 ```
 
 ## Database Integration
@@ -101,14 +101,15 @@ reflex again.  Not a huge deal but this will be faster, and having more control 
 Retrieve all posts
 ```mermaid
 sequenceDiagram
-    cmd/main.go->>postInteractor: ReadAll(context)
+    cmd/main.go-->>httpController: handle
+    httpController-->>postInteractor: ReadAll(context)
     postInteractor-->>repo: ReadAll(Context)
     repo->>db: Find(allPosts)
     db-->>repo: data
     repo->>repo: toDomainList
     repo->>postInteractor: response
     postInteractor->>postInteractor: convertToPostOutput
-    postInteractor->>cmd/main.go: RespondJson
+    postInteractor->>httpController: RespondJson
 ```
 ```mermaid
 ---
@@ -142,3 +143,59 @@ classDiagram
     repository_mysqlrepo_rep: (p *postModel)toDomain(postModel)
     post_interactor: NewInteractor(repo domain.PostRepo)
 ```
+
+## Testing
+There are two types of testing we are concerned about.  Unit testing and Integration testing.  Unit testing shoudl be code that tests the basic functionality of the code that is written.  Integration testing is testing who this system works in conjunction with the servers that support it - things like MySql, or other services.  
+Another issue I ran into while exectuing tests is tha Go caches tests.  So if you are testing application code and it is changing your test may not be exectued with the regular command of 
+`go test`
+Passing in the commands will solve that problem
+` go test -count=1`
+To run a specific test you can do something like this
+`go gest -count ./test/delete_test.go`
+
+### Unit Testing
+Go Lang has top tier support for testing, there are a few caveats that need to be understood before writing tests.  The test compiler/runner does it out of convention not configuration.  What this means is that if you have a test case that is not named correctly i.e <name>_test.go then the tests will not be run.  Also for test to run the test case methods must support this signagure:
+```
+func TestUpdate(t *testing.T) {
+}
+```
+Typically in GoLang there is not a tests folder.  Tests live in the same directory as the file they are written to test.  I have created a test folder to specifically execute integration tests.  
+
+### Inegration Testing
+These tests typically invoke the service via an http call.  Here is an example of the delete test case:
+```
+package tests
+
+import (
+	"log"
+	"net/http"
+	"testing"
+)
+
+func TestDelete(t *testing.T) {
+	// URL of the resource to delete
+	url := "http://localhost/posts/1"
+
+	// Create a new DELETE request
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		log.Fatalf("Error creating DELETE request: %v", err)
+	}
+
+	// Perform the request
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatalf("Error performing DELETE request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		log.Fatalf("Expected status code %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	log.Println("Resource deleted successfully!")
+}
+```
+The whole point ofintegration tests is to create an easy mechanism to execute tests against a running system.  Where unit tests are tests that run against just the code.  There should be no server running when unit tests are run.

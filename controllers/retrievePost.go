@@ -3,8 +3,6 @@ package controllers
 import (
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/obriena/dockerdevtemplate/domain"
@@ -13,19 +11,13 @@ import (
 
 func RetrievePostById(w http.ResponseWriter, r *http.Request) {
 	log.Println("controllers.RetrievePostByID Start")
-	split := strings.Split(r.URL.Path, "/")
-	postId := split[2]
-	i, err := strconv.Atoi(postId)
-	if err != nil {
-		log.Println(r.URL.Query())
-		log.Println("controllers.RetrievePostById: Unable to handle requested id: ", postId)
-	}
 
 	ctx := r.Context()
 	postInteractor := ctx.Value(infra.CtxPostInteractorKey).(domain.PostInteractor)
+	postId := ctx.Value(infra.CtxPostIdKey).(int)
 
 	start := time.Now()
-	postInput := domain.PostInteractorReadByIdInput{Id: i}
+	postInput := domain.PostInteractorReadByIdInput{Id: postId}
 	posts, err := postInteractor.ReadById(ctx, postInput)
 	if err != nil {
 		log.Println("Error retrieving posts: ", err)
@@ -40,19 +32,21 @@ func RetrievePostById(w http.ResponseWriter, r *http.Request) {
 
 func RetrievePostsByOwnerId(w http.ResponseWriter, r *http.Request) {
 	log.Println("controllers.RetrievePostOwnerById Start")
-	split := strings.Split(r.URL.Path, "/")
-	postId := split[3]
-	i, err := strconv.Atoi(postId)
-	if err != nil {
-		log.Println(r.URL.Query())
-		log.Println("controllers.RetrievePostOwnerById: Unable to handle requested id: ", postId)
-	}
+	// split := strings.Split(r.URL.Path, "/")
+	// postId := split[3]
+	// i, err := strconv.Atoi(postId)
+	// if err != nil {
+	// 	log.Println(r.URL.Query())
+	// 	log.Println("controllers.RetrievePostOwnerById: Unable to handle requested id: ", postId)
+	// }
 
 	ctx := r.Context()
 	postInteractor := ctx.Value(infra.CtxPostInteractorKey).(domain.PostInteractor)
+	postId := ctx.Value(infra.CtxPostIdKey).(int)
 
 	start := time.Now()
-	postInput := domain.PostInteractorReadByCreatedIdInput{Id: i}
+	postInput := domain.PostInteractorReadByCreatedIdInput{Id: postId}
+
 	posts, err := postInteractor.ReadByCreatedById(ctx, postInput)
 	if err != nil {
 		log.Println("Error retrieving posts: ", err)
