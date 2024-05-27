@@ -1,7 +1,7 @@
 # Docker Development Template
 
 ## Goals
-This is a project to show how to setup a workign development environment using docker containers
+This is a project to show how to setup a working development environment using docker containers
 
 ## Project Setup
 There are two core configuration files from a development perspective.
